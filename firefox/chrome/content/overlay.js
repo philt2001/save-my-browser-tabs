@@ -50,41 +50,6 @@ var savemytabs = {
 	// Saving the state of tabs:
 	save: function()
 	{
-		// Check if this is a top-most window:
-		var mediator = this.Cc["@mozilla.org/appshell/window-mediator;1"].getService(this.Ci.nsIWindowMediator);  
-
-		if(window != mediator.getMostRecentWindow("navigator:browser"))
-		{
-			// It's not - deny saving:
-			this.next();
-			return;
-		}
-
-		var lines = [];
-
-		// Cycle through the windows:
-		var w = 1, t = 1;
-		var browserEnumerator = mediator.getEnumerator("navigator:browser");  
-
-		while(browserEnumerator.hasMoreElements())
-		{
-			var browserWin = browserEnumerator.getNext();
-			var tabbrowser = browserWin.gBrowser;
-
-			// Cycle through the tabs:
-			var nbrowsers = tabbrowser.browsers.length;
-
-			for(var i = 0; i < nbrowsers; i++)
-			{
-				var browser = tabbrowser.browsers[i];
-
-				lines.push(("window #" + w + "/tab #" + (t++)) + "\t" + browser.currentURI.spec.replace("\t", " ") + "\t" + browser.contentDocument.title.replace("\t", " "));
-			}
-
-			++w;
-			t = 1;
-		}
-
 		// Extract current date/time:
 		function prepare(num)
 		{
@@ -95,13 +60,76 @@ var savemytabs = {
 
 			return str;
 		}
+		
+		// Check if this is a top-most window:
+		var mediator = this.Cc["@mozilla.org/appshell/window-mediator;1"].getService(this.Ci.nsIWindowMediator);  
 
+		if(window != mediator.getMostRecentWindow("navigator:browser"))
+		{
+			// It's not - deny saving:
+			this.next();
+			return;
+		}
+		
+		var lines = [];
+		
+		var useHtml = this.branch.getBoolPref("usehtml");
+		var fileExt = "";
+		
 		var today = new Date();
 		var yyyy = today.getFullYear();
 		var mm = today.getMonth() + 1;
 		var dd = today.getDate();
 		var hh = today.getHours();
 		var min = today.getMinutes();
+		
+		//Set up the HTML headings
+		if ( useHtml )
+		{
+			lines.push("<HTML>");
+			lines.push("<head><title>Save My Tabs</title></head>");
+			lines.push("<body>");
+			lines.push("These were the open tabs saved at: "+String(yyyy)+"-"+prepare(mm)+"-"+prepare(dd)+" "+prepare(hh)+":"+prepare(min)+"<br><br>" );
+			fileExt = ".html";
+		}
+		else
+		{
+			lines.push("These were the open tabs saved at: "+String(yyyy)+"-"+prepare(mm)+"-"+prepare(dd)+" "+prepare(hh)+":"+prepare(min) );
+			lines.push("");
+			fileExt = ".txt";
+		}
+
+		// Cycle through the windows:
+		var w = 1, t = 1;
+		var browserEnumerator = mediator.getEnumerator("navigator:browser");  
+		
+		while(browserEnumerator.hasMoreElements())
+		{
+			var browserWin = browserEnumerator.getNext();
+			var tabbrowser = browserWin.gBrowser;
+
+			// Cycle through the tabs:
+			var nbrowsers = tabbrowser.browsers.length;
+			for(var i = 0; i < nbrowsers; i++)
+			{
+				var browser = tabbrowser.browsers[i];
+				if ( useHtml )
+				{
+					lines.push(("window #" + w + "/tab #" + (t++)) + "\t <a href=\"" + browser.currentURI.spec.replace("\t", " ") + "\">" + browser.contentDocument.title.replace("\t", " ")+"</a><br>");
+				}
+				else
+				{
+					lines.push(("window #" + w + "/tab #" + (t++)) + "\t" + browser.currentURI.spec.replace("\t", " ") + "\t" + browser.contentDocument.title.replace("\t", " "));
+				}
+			}
+			++w;
+			t = 1;
+		}
+		if ( useHtml )
+		{
+			lines.push("</body>");
+			lines.push("</HTML>");
+		}		
 
 		// Get the directory to save to:
 		var file = null;
@@ -121,10 +149,9 @@ var savemytabs = {
 				file = this.Cc["@mozilla.org/file/local;1"].createInstance(this.Ci.nsILocalFile);
 				file.initWithPath(dir);
 		}
-
 		if(file && file.exists())
 		{
-			file.append("opentabs-" + this.getUserName() + "-" + String(yyyy) + prepare(mm) + prepare(dd) + "-" + prepare(hh) + prepare(min) + ".txt");
+			file.append("opentabs-" + this.getUserName() + "-" + String(yyyy) + prepare(mm) + prepare(dd) + "-" + prepare(hh) + prepare(min) + fileExt);
 
 			// Create file output stream:
 			var foStream = this.Cc["@mozilla.org/network/file-output-stream;1"].createInstance(this.Ci.nsIFileOutputStream);

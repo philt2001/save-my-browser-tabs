@@ -48,6 +48,10 @@
 		<textbox id="savemytabs-period" type="number" min="1" value="15" />
 
 		<spacer style="height:10px;" />
+		
+		<checkbox id="savemytabs-usehtml" label="&savemytabs.options.usehtml;"  checked="true" />
+		
+		<spacer style="height:10px;" />
 
 		<label control="savemytabs-directory" value="&savemytabs.options.directory;:" />
 		<textbox id="savemytabs-directory" value="Home" />
