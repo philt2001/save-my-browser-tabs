@@ -44,6 +44,7 @@ savemytabs.options = {
 		this.branch = prefservice.getBranch("extensions.savemytabs.");
 
 		document.getElementById("savemytabs-period").value = this.branch.getIntPref("period");
+		document.getElementById("savemytabs-clearperiod").value = this.branch.getIntPref("clearperiod");
 		document.getElementById("savemytabs-directory").value = this.branch.getCharPref("directory");
 	},
 
@@ -115,6 +116,36 @@ savemytabs.options = {
 		}
 
 		this.branch.setIntPref("period", period);
+		
+		var clearperiod = document.getElementById("savemytabs-clearperiod").value;
+
+		if(!clearperiod.length)
+		{
+			clearperiod = 240;
+		}
+		else
+		{
+			try
+			{
+				clearperiod = parseInt(clearperiod, 10);
+
+				if(!clearperiod)
+				{
+					clearperiod = 240;
+				}
+				else
+				{
+					if(clearperiod < 0)
+						clearperiod = 240;
+				}
+			}
+			catch(e)
+			{
+				clearperiod = 240;
+			}
+		}
+		
+		this.branch.setIntPref("clearperiod", clearperiod);
 
 		var directory = document.getElementById("savemytabs-directory").value;
 

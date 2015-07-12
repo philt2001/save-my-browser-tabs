@@ -48,6 +48,11 @@
 		<textbox id="savemytabs-period" type="number" min="1" value="15" />
 
 		<spacer style="height:10px;" />
+		
+		<label control="savemytabs-clearperiod" value="&savemytabs.options.clearperiod;:" />
+		<textbox id="savemytabs-clearperiod" type="number" min="0" value="240" />
+
+		<spacer style="height:10px;" />
 
 		<label control="savemytabs-directory" value="&savemytabs.options.directory;:" />
 		<textbox id="savemytabs-directory" value="Home" />
