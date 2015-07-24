@@ -42,7 +42,19 @@ var savemytabs = {
 		// Initialize preferences:
 		var prefservice = this.Cc["@mozilla.org/preferences-service;1"].getService(this.Ci.nsIPrefService);
 		this.branch = prefservice.getBranch("extensions.savemytabs.");
-
+		
+		//Start Tab Groups/Panorama here
+		if ( this.branch.getBoolPref("savetabgroups") )
+		{
+			var mediator = this.Cc["@mozilla.org/appshell/window-mediator;1"].getService(this.Ci.nsIWindowMediator);  
+			var browserWin = mediator.getMostRecentWindow("navigator:browser");
+			var contentWindow = browserWin.TabView.getContentWindow();
+			if ( contentWindow == null )
+			{
+				browserWin.TabView._initFrame(function() {} );
+			}
+		}
+		
 		// Prepare the first run:
 		this.next();
 	},
@@ -53,36 +65,69 @@ var savemytabs = {
 		// Check if this is a top-most window:
 		var mediator = this.Cc["@mozilla.org/appshell/window-mediator;1"].getService(this.Ci.nsIWindowMediator);  
 
-		if(window != mediator.getMostRecentWindow("navigator:browser"))
+		if (window != mediator.getMostRecentWindow("navigator:browser"))
 		{
 			// It's not - deny saving:
 			this.next();
 			return;
 		}
-
+		
 		var lines = [];
 
 		// Cycle through the windows:
-		var w = 1, t = 1;
+		var w = 1;
 		var browserEnumerator = mediator.getEnumerator("navigator:browser");  
 
 		while(browserEnumerator.hasMoreElements())
 		{
 			var browserWin = browserEnumerator.getNext();
 			var tabbrowser = browserWin.gBrowser;
-
-			// Cycle through the tabs:
-			var nbrowsers = tabbrowser.browsers.length;
-
-			for(var i = 0; i < nbrowsers; i++)
+			
+			//for each window, loop through the tab groups
+			if ( this.branch.getBoolPref("savetabgroups") )
 			{
-				var browser = tabbrowser.browsers[i];
-
-				lines.push(("window #" + w + "/tab #" + (t++)) + "\t" + browser.currentURI.spec.replace("\t", " ") + "\t" + browser.contentDocument.title.replace("\t", " "));
+				var contentWindow = browserWin.TabView.getContentWindow();
+				if ( contentWindow == null )
+				{
+					//Then start Panorama and wait for it to start
+					//See https://bugzilla.mozilla.org/show_bug.cgi?id=695768 for information on starting Panorama (can't find documentation)
+					browserWin.TabView._initFrame(function () { } );
+					
+					this.next(1);
+					return;
+				}
+			
+				var numGroups = contentWindow.GroupItems.groupItems.length;
+				for (var idxGroup=0;idxGroup<numGroups;idxGroup++)
+				{
+					var numTabsInGroup = contentWindow.GroupItems.groupItems[idxGroup]._children.length;
+					for ( var idxTab=0; idxTab < numTabsInGroup; idxTab++ )
+					{
+						var tabItem = contentWindow.GroupItems.groupItems[idxGroup]._children[idxTab];
+						var browser = tabbrowser.getBrowserForTab( tabItem.tab );
+						
+						var pageURL = browser.currentURI.spec;
+						var pageDescription = tabItem.tab.label;
+						
+						lines.push("window #" + w + "/group #" + (idxGroup+1) + "/tab #" + (idxTab+1) + "\t" + pageURL.replace("\t", " ") + "\t" + pageDescription.replace("\t", " "));
+					}
+				}
 			}
+			else //if not saving tab groups
+			{
+				var nbrowsers = tabbrowser.browsers.length;
 
-			++w;
-			t = 1;
+				for(var idxTab = 0; idxTab < nbrowsers; idxTab++)
+				{
+					var browser = tabbrowser.browsers[idxTab];
+					var pageURL = browser.currentURI.spec;
+					
+					var pageDescription = tabbrowser.tabs[idxTab].label;
+					
+					lines.push("window #" + w + "/tab #" + (idxTab+1) + "\t" + pageURL.replace("\t", " ") + "\t" + pageDescription.replace("\t", " "));
+				}
+			}
+			w++;
 		}
 
 		// Extract current date/time:
@@ -142,16 +187,27 @@ var savemytabs = {
 		// Prepare for the next iteration:
 		this.next();
 	},
-
-	next: function()
+	
+	//Optional timeout input
+	next: function( timeout_s )
 	{
 		var that = this;
+		var timeout_ms = [];
+		
+		if ( arguments.length === 0 )
+		{
+			timeout_ms = this.branch.getIntPref("period") * 60 * 1000;
+		}
+		else
+		{
+			timeout_ms = timeout_s * 1000;
+		}
 
 		setTimeout(function()
 		{
 			that.save();
 		},
-		this.branch.getIntPref("period") * 60 * 1000);
+		timeout_ms);
 	},
 
 	getUserName: function()

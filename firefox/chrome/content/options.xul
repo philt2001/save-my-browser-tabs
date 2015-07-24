@@ -46,6 +46,10 @@
 	<vbox>
 		<label control="savemytabs-period" value="&savemytabs.options.period;:" />
 		<textbox id="savemytabs-period" type="number" min="1" value="15" />
+		
+		<spacer style="height:10px;" />
+		
+		<checkbox id="savemytabs-savetabgroups" label="&savemytabs.options.savetabgroups;"  checked="true" />
 
 		<spacer style="height:10px;" />
 
