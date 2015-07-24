@@ -44,12 +44,15 @@ var savemytabs = {
 		this.branch = prefservice.getBranch("extensions.savemytabs.");
 		
 		//Start Tab Groups/Panorama here
-		var mediator = this.Cc["@mozilla.org/appshell/window-mediator;1"].getService(this.Ci.nsIWindowMediator);  
-		var browserWin = mediator.getMostRecentWindow("navigator:browser");
-		var contentWindow = browserWin.TabView.getContentWindow();
-		if ( contentWindow == null )
+		if ( this.branch.getBoolPref("savetabgroups") )
 		{
-			browserWin.TabView._initFrame(function() {} );
+			var mediator = this.Cc["@mozilla.org/appshell/window-mediator;1"].getService(this.Ci.nsIWindowMediator);  
+			var browserWin = mediator.getMostRecentWindow("navigator:browser");
+			var contentWindow = browserWin.TabView.getContentWindow();
+			if ( contentWindow == null )
+			{
+				browserWin.TabView._initFrame(function() {} );
+			}
 		}
 		
 		// Prepare the first run:
@@ -81,35 +84,47 @@ var savemytabs = {
 			var tabbrowser = browserWin.gBrowser;
 			
 			//for each window, loop through the tab groups
-			var contentWindow = browserWin.TabView.getContentWindow();
-			if ( contentWindow == null )
+			if ( this.branch.getBoolPref("savetabgroups") )
 			{
-				//Then start Panorama and wait for it to start
-				//See https://bugzilla.mozilla.org/show_bug.cgi?id=695768 for information on starting Panorama (can't find documentation)
-				browserWin.TabView._initFrame(function () { } );
-				
-				//Very crude way to way in JavaScript until tab browser has started
-				var loopCounter = 0;
-				while ( (contentWindow = browserWin.TabView.getContentWindow()) == null )
+				var contentWindow = browserWin.TabView.getContentWindow();
+				if ( contentWindow == null )
 				{
-					loopCounter++;
-					if ( !(loopCounter % 100) ) {};
+					//Then start Panorama and wait for it to start
+					//See https://bugzilla.mozilla.org/show_bug.cgi?id=695768 for information on starting Panorama (can't find documentation)
+					browserWin.TabView._initFrame(function () { } );
+					
+					this.next(1);
+					return;
+				}
+			
+				var numGroups = contentWindow.GroupItems.groupItems.length;
+				for (var idxGroup=0;idxGroup<numGroups;idxGroup++)
+				{
+					var numTabsInGroup = contentWindow.GroupItems.groupItems[idxGroup]._children.length;
+					for ( var idxTab=0; idxTab < numTabsInGroup; idxTab++ )
+					{
+						var tabItem = contentWindow.GroupItems.groupItems[idxGroup]._children[idxTab];
+						var browser = tabbrowser.getBrowserForTab( tabItem.tab );
+						
+						var pageURL = browser.currentURI.spec;
+						var pageDescription = tabItem.tab.label;
+						
+						lines.push("window #" + w + "/group #" + (idxGroup+1) + "/tab #" + (idxTab+1) + "\t" + pageURL.replace("\t", " ") + "\t" + pageDescription.replace("\t", " "));
+					}
 				}
 			}
-			
-			var numGroups = contentWindow.GroupItems.groupItems.length;
-			for (var idxGroup=0;idxGroup<numGroups;idxGroup++)
+			else //if not saving tab groups
 			{
-				var numTabsInGroup = contentWindow.GroupItems.groupItems[idxGroup]._children.length;
-				for ( var idxTab=0; idxTab < numTabsInGroup; idxTab++ )
+				var nbrowsers = tabbrowser.browsers.length;
+
+				for(var idxTab = 0; idxTab < nbrowsers; idxTab++)
 				{
-					var tabItem = contentWindow.GroupItems.groupItems[idxGroup]._children[idxTab];
-					var browser = tabbrowser.getBrowserForTab( tabItem.tab );
-					
+					var browser = tabbrowser.browsers[idxTab];
 					var pageURL = browser.currentURI.spec;
-					var pageDescription = tabItem.tab.label;
 					
-					lines.push("window #" + w + "/group #" + (idxGroup+1) + "/tab #" + (idxTab+1) + "\t" + pageURL.replace("\t", " ") + "\t" + pageDescription.replace("\t", " "));
+					var pageDescription = tabbrowser.tabs[idxTab].label;
+					
+					lines.push("window #" + w + "/tab #" + (idxTab+1) + "\t" + pageURL.replace("\t", " ") + "\t" + pageDescription.replace("\t", " "));
 				}
 			}
 			w++;
@@ -172,16 +187,27 @@ var savemytabs = {
 		// Prepare for the next iteration:
 		this.next();
 	},
-
-	next: function()
+	
+	//Optional timeout input
+	next: function( timeout_s )
 	{
 		var that = this;
+		var timeout_ms = [];
+		
+		if ( arguments.length === 0 )
+		{
+			timeout_ms = this.branch.getIntPref("period") * 60 * 1000;
+		}
+		else
+		{
+			timeout_ms = timeout_s * 1000;
+		}
 
 		setTimeout(function()
 		{
 			that.save();
 		},
-		this.branch.getIntPref("period") * 60 * 1000);
+		timeout_ms);
 	},
 
 	getUserName: function()

@@ -44,6 +44,7 @@ savemytabs.options = {
 		this.branch = prefservice.getBranch("extensions.savemytabs.");
 
 		document.getElementById("savemytabs-period").value = this.branch.getIntPref("period");
+		document.getElementById("savemytabs-savetabgroups").checked = this.branch.getBoolPref("savetabgroups");
 		document.getElementById("savemytabs-directory").value = this.branch.getCharPref("directory");
 	},
 
@@ -115,6 +116,9 @@ savemytabs.options = {
 		}
 
 		this.branch.setIntPref("period", period);
+		
+		var saveTabGroups = document.getElementById("savemytabs-savetabgroups").checked;
+		this.branch.setBoolPref("savetabgroups", saveTabGroups);
 
 		var directory = document.getElementById("savemytabs-directory").value;
 
