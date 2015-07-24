@@ -42,7 +42,16 @@ var savemytabs = {
 		// Initialize preferences:
 		var prefservice = this.Cc["@mozilla.org/preferences-service;1"].getService(this.Ci.nsIPrefService);
 		this.branch = prefservice.getBranch("extensions.savemytabs.");
-
+		
+		//Start Tab Groups/Panorama here
+		var mediator = this.Cc["@mozilla.org/appshell/window-mediator;1"].getService(this.Ci.nsIWindowMediator);  
+		var browserWin = mediator.getMostRecentWindow("navigator:browser");
+		var contentWindow = browserWin.TabView.getContentWindow();
+		if ( contentWindow == null )
+		{
+			browserWin.TabView._initFrame(function() {} );
+		}
+		
 		// Prepare the first run:
 		this.next();
 	},
@@ -53,36 +62,57 @@ var savemytabs = {
 		// Check if this is a top-most window:
 		var mediator = this.Cc["@mozilla.org/appshell/window-mediator;1"].getService(this.Ci.nsIWindowMediator);  
 
-		if(window != mediator.getMostRecentWindow("navigator:browser"))
+		if (window != mediator.getMostRecentWindow("navigator:browser"))
 		{
 			// It's not - deny saving:
 			this.next();
 			return;
 		}
-
+		
 		var lines = [];
 
 		// Cycle through the windows:
-		var w = 1, t = 1;
+		var w = 1;
 		var browserEnumerator = mediator.getEnumerator("navigator:browser");  
 
 		while(browserEnumerator.hasMoreElements())
 		{
 			var browserWin = browserEnumerator.getNext();
 			var tabbrowser = browserWin.gBrowser;
-
-			// Cycle through the tabs:
-			var nbrowsers = tabbrowser.browsers.length;
-
-			for(var i = 0; i < nbrowsers; i++)
+			
+			//for each window, loop through the tab groups
+			var contentWindow = browserWin.TabView.getContentWindow();
+			if ( contentWindow == null )
 			{
-				var browser = tabbrowser.browsers[i];
-
-				lines.push(("window #" + w + "/tab #" + (t++)) + "\t" + browser.currentURI.spec.replace("\t", " ") + "\t" + browser.contentDocument.title.replace("\t", " "));
+				//Then start Panorama and wait for it to start
+				//See https://bugzilla.mozilla.org/show_bug.cgi?id=695768 for information on starting Panorama (can't find documentation)
+				browserWin.TabView._initFrame(function () { } );
+				
+				//Very crude way to way in JavaScript until tab browser has started
+				var loopCounter = 0;
+				while ( (contentWindow = browserWin.TabView.getContentWindow()) == null )
+				{
+					loopCounter++;
+					if ( !(loopCounter % 100) ) {};
+				}
 			}
-
-			++w;
-			t = 1;
+			
+			var numGroups = contentWindow.GroupItems.groupItems.length;
+			for (var idxGroup=0;idxGroup<numGroups;idxGroup++)
+			{
+				var numTabsInGroup = contentWindow.GroupItems.groupItems[idxGroup]._children.length;
+				for ( var idxTab=0; idxTab < numTabsInGroup; idxTab++ )
+				{
+					var tabItem = contentWindow.GroupItems.groupItems[idxGroup]._children[idxTab];
+					var browser = tabbrowser.getBrowserForTab( tabItem.tab );
+					
+					var pageURL = browser.currentURI.spec;
+					var pageDescription = tabItem.tab.label;
+					
+					lines.push("window #" + w + "/group #" + (idxGroup+1) + "/tab #" + (idxTab+1) + "\t" + pageURL.replace("\t", " ") + "\t" + pageDescription.replace("\t", " "));
+				}
+			}
+			w++;
 		}
 
 		// Extract current date/time:
