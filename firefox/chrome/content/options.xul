@@ -52,6 +52,10 @@
 		<checkbox id="savemytabs-savetabgroups" label="&savemytabs.options.savetabgroups;"  checked="true" />
 
 		<spacer style="height:10px;" />
+		
+		<checkbox id="savemytabs-usehtml" label="&savemytabs.options.usehtml;"  checked="true" />
+		
+		<spacer style="height:10px;" />
 
 		<label control="savemytabs-directory" value="&savemytabs.options.directory;:" />
 		<textbox id="savemytabs-directory" value="Home" />
