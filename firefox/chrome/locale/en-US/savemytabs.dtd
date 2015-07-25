@@ -3,6 +3,7 @@
 <!ENTITY savemytabs.options.period "Period, in minutes, between saves">
 <!ENTITY savemytabs.options.usehtml "Save as HTML">
 <!ENTITY savemytabs.options.savetabgroups "Save the tab in the tab groups">
+<!ENTITY savemytabs.options.clearperiod "Time (min), before old saves are deleted">
 <!ENTITY savemytabs.options.directory "Directory to save file to">
 <!ENTITY savemytabs.options.choose "Choose directory">
 <!ENTITY savemytabs.options.resetP "Reset to Profile">

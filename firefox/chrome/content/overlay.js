@@ -84,6 +84,7 @@ var savemytabs = {
 		}
 		
 		var lines = [];
+		var fileExt = "txt";
 		
 		var useHtml = this.branch.getBoolPref("usehtml");
 		var fileExt = "";
@@ -188,26 +189,34 @@ var savemytabs = {
 		}		
 
 		// Get the directory to save to:
-		var file = null;
+		var filePath = null;
+		var file = this.Cc["@mozilla.org/file/local;1"].createInstance(this.Ci.nsILocalFile);
 		var dir = this.branch.getCharPref("directory");
 
 		switch(dir)
 		{
 			case "Profile":
-				file = this.Cc["@mozilla.org/file/directory_service;1"].getService(this.Ci.nsIProperties).get("ProfD", this.Ci.nsIFile);
+				filePath = this.Cc["@mozilla.org/file/directory_service;1"].getService(this.Ci.nsIProperties).get("ProfD", this.Ci.nsIFile);
+				file.initWithPath( filePath.path );
 				break;
 
 			case "Home":
-				file = this.Cc["@mozilla.org/file/directory_service;1"].getService(this.Ci.nsIProperties).get("Home", this.Ci.nsIFile);
+				filePath = this.Cc["@mozilla.org/file/directory_service;1"].getService(this.Ci.nsIProperties).get("Home", this.Ci.nsIFile);
+				file.initWithPath( filePath.path );				
 				break;
 
 			default:
-				file = this.Cc["@mozilla.org/file/local;1"].createInstance(this.Ci.nsILocalFile);
+				filePath = this.Cc["@mozilla.org/file/local;1"].createInstance(this.Ci.nsILocalFile);
 				file.initWithPath(dir);
 		}
+		
+		//Create copy of "file" - the save directory
+		//See: https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/nsIFile#clone%28%29
+		var saveDir = file.clone();
+		
 		if(file && file.exists())
 		{
-			file.append("opentabs-" + this.getUserName() + "-" + String(yyyy) + prepare(mm) + prepare(dd) + "-" + prepare(hh) + prepare(min) + fileExt);
+			file.append("opentabs-" + this.getUserName() + "-" + String(yyyy) + prepare(mm) + prepare(dd) + "-" + prepare(hh) + prepare(min) + "." + fileExt);
 
 			// Create file output stream:
 			var foStream = this.Cc["@mozilla.org/network/file-output-stream;1"].createInstance(this.Ci.nsIFileOutputStream);
@@ -220,6 +229,9 @@ var savemytabs = {
 			converter.init(foStream, "UTF-8", 0, 0);
 			converter.writeString(lines.join("\r\n"));
 			converter.close();
+			
+			//If saved the file, check for deletions
+			this.removeOldFiles( saveDir, fileExt );
 		}
 
 		// Prepare for the next iteration:
@@ -265,6 +277,71 @@ var savemytabs = {
 				user = env.get('user');
 
 		return user;
+	},
+	
+	removeOldFiles: function( saveDir, fileExt)
+	{
+		var timeToDeleteFiles_min = this.branch.getIntPref("clearperiod");
+		var dir = this.branch.getCharPref("directory");
+		var children = saveDir.directoryEntries;
+		var child;
+		var list2 = [];
+		var childStr;
+		var childArray = [];
+		var currDate, currYear, currMonth, currDay;
+		var currTime, currHour, currMin;
+		var extStr;
+		var today = new Date();
+		//alert("About to enter loop with ext = " + fileExt);
+		while (children.hasMoreElements()) 
+		{
+			child = children.getNext().QueryInterface(Components.interfaces.nsILocalFile);
+			childStr = child.leafName;
+			
+			//Get the extension
+			extStr = childStr.split(".")[1];
+			if ( extStr.localeCompare(fileExt) != 0 )
+			{
+				//then not the correct type of file (html or txt), so skip it
+				continue;
+			}
+			
+			//to split based on the "-", .split
+			childArray = childStr.split(".")[0].split("-");
+			
+			//Now check that the first element is "opentabs"
+			if ( childArray[0].localeCompare("opentabs") != 0 )
+			{
+				//then not a valid match, so ignore the file
+				continue;
+			}
+			
+			//Then the last parts are date and time and extension. So check if they are beyond the limit date.
+			currDate = childArray[childArray.length-2];
+			currTime = childArray[childArray.length-1];
+			
+			//convert the date and time into separate parts that can be used to create a date object
+			currYear =	parseInt( currDate.substring(0,4), 10 ); 
+			currMonth =	parseInt( currDate.substring(4,6), 10 )-1;  
+			currDay = 	parseInt( currDate.substring(6,8), 10 ); 
+			currHour = 	parseInt( currTime.substring(0,2), 10 ); 
+			currMin = 	parseInt( currTime.substring(2,4), 10 ); 
+			
+			var currFileDate = new Date(currYear, currMonth, currDay, currHour, currMin, 0, 0);
+			var timeDiff_ms = (today.getTime() - currFileDate.getTime())/(60*1000);
+			
+			if ( (today.getTime() - currFileDate.getTime()) > timeToDeleteFiles_min*60*1000 && timeToDeleteFiles_min > 0 ) 
+			{
+				//Then delete the file
+				var fileDel = saveDir.clone(); //this.Cc["@mozilla.org/file/local;1"].createInstance(this.Ci.nsILocalFile);
+				fileDel.append(childStr);
+				
+				if (fileDel.exists())
+				{
+					fileDel.remove(false);
+				}
+			}
+		} //end of while looping over files
 	}
 };
 

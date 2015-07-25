@@ -46,6 +46,7 @@ savemytabs.options = {
 		document.getElementById("savemytabs-period").value = this.branch.getIntPref("period");
 		document.getElementById("savemytabs-usehtml").checked = this.branch.getBoolPref("usehtml");
 		document.getElementById("savemytabs-savetabgroups").checked = this.branch.getBoolPref("savetabgroups");
+		document.getElementById("savemytabs-clearperiod").value = this.branch.getIntPref("clearperiod");
 		document.getElementById("savemytabs-directory").value = this.branch.getCharPref("directory");
 	},
 
@@ -123,6 +124,36 @@ savemytabs.options = {
 		
 		var saveTabGroups = document.getElementById("savemytabs-savetabgroups").checked;
 		this.branch.setBoolPref("savetabgroups", saveTabGroups);
+		
+		var clearperiod = document.getElementById("savemytabs-clearperiod").value;
+
+		if(!clearperiod.length)
+		{
+			clearperiod = 240;
+		}
+		else
+		{
+			try
+			{
+				clearperiod = parseInt(clearperiod, 10);
+
+				if(!clearperiod)
+				{
+					clearperiod = 240;
+				}
+				else
+				{
+					if(clearperiod < 0)
+						clearperiod = 240;
+				}
+			}
+			catch(e)
+			{
+				clearperiod = 240;
+			}
+		}
+		
+		this.branch.setIntPref("clearperiod", clearperiod);
 
 		var directory = document.getElementById("savemytabs-directory").value;
 
