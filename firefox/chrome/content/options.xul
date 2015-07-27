@@ -49,11 +49,11 @@
 		
 		<spacer style="height:10px;" />
 		
-		<checkbox id="savemytabs-savetabgroups" label="&savemytabs.options.savetabgroups;"  checked="true" />
-
+		<checkbox id="savemytabs-usehtml" label="&savemytabs.options.usehtml;"  checked="true" />
+		
 		<spacer style="height:10px;" />
 		
-		<checkbox id="savemytabs-usehtml" label="&savemytabs.options.usehtml;"  checked="true" />
+		<checkbox id="savemytabs-savetabgroups" label="&savemytabs.options.savetabgroups;"  checked="true" />
 		
 		<spacer style="height:10px;" />
 		

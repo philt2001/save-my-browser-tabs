@@ -84,7 +84,6 @@ var savemytabs = {
 		}
 		
 		var lines = [];
-		var fileExt = "txt";
 		
 		var useHtml = this.branch.getBoolPref("usehtml");
 		var fileExt = "";
@@ -103,13 +102,13 @@ var savemytabs = {
 			lines.push("<head><title>Save My Tabs</title></head>");
 			lines.push("<body>");
 			lines.push("These were the open tabs saved at: "+String(yyyy)+"-"+prepare(mm)+"-"+prepare(dd)+" "+prepare(hh)+":"+prepare(min)+"<br><br>" );
-			fileExt = ".html";
+			fileExt = "html";
 		}
 		else
 		{
 			lines.push("These were the open tabs saved at: "+String(yyyy)+"-"+prepare(mm)+"-"+prepare(dd)+" "+prepare(hh)+":"+prepare(min) );
 			lines.push("");
-			fileExt = ".txt";
+			fileExt = "txt";
 		}
 
 		// Cycle through the windows:
@@ -179,7 +178,6 @@ var savemytabs = {
 					}
 				}
 			}
-			++w;
 			w++;
 		}
 		if ( useHtml )
@@ -292,7 +290,6 @@ var savemytabs = {
 		var currTime, currHour, currMin;
 		var extStr;
 		var today = new Date();
-		//alert("About to enter loop with ext = " + fileExt);
 		while (children.hasMoreElements()) 
 		{
 			child = children.getNext().QueryInterface(Components.interfaces.nsILocalFile);
